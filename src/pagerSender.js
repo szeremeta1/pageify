@@ -21,8 +21,7 @@ async function sendToPager(phoneNumber, message, options = {}) {
     
     // Launch browser
     browser = await chromium.launch({
-      headless,
-      timeout
+      headless
     });
     
     const context = await browser.newContext();
@@ -54,17 +53,15 @@ async function sendToPager(phoneNumber, message, options = {}) {
     let phoneInput = null;
     for (const selector of phoneSelectors) {
       try {
-        phoneInput = await page.locator(selector).first();
-        if (await phoneInput.count() > 0) {
-          await phoneInput.waitFor({ timeout: 5000 });
-          break;
-        }
+        phoneInput = page.locator(selector).first();
+        await phoneInput.waitFor({ timeout: 5000 });
+        break;
       } catch (e) {
         continue;
       }
     }
     
-    if (!phoneInput || await phoneInput.count() === 0) {
+    if (!phoneInput) {
       throw new Error('Could not find phone number input field');
     }
     
@@ -86,17 +83,15 @@ async function sendToPager(phoneNumber, message, options = {}) {
     let messageInput = null;
     for (const selector of messageSelectors) {
       try {
-        messageInput = await page.locator(selector).first();
-        if (await messageInput.count() > 0) {
-          await messageInput.waitFor({ timeout: 5000 });
-          break;
-        }
+        messageInput = page.locator(selector).first();
+        await messageInput.waitFor({ timeout: 5000 });
+        break;
       } catch (e) {
         continue;
       }
     }
     
-    if (!messageInput || await messageInput.count() === 0) {
+    if (!messageInput) {
       throw new Error('Could not find message input field');
     }
     
@@ -118,25 +113,27 @@ async function sendToPager(phoneNumber, message, options = {}) {
     let sendButton = null;
     for (const selector of sendSelectors) {
       try {
-        sendButton = await page.locator(selector).first();
-        if (await sendButton.count() > 0) {
-          await sendButton.waitFor({ timeout: 5000 });
-          break;
-        }
+        sendButton = page.locator(selector).first();
+        await sendButton.waitFor({ timeout: 5000 });
+        break;
       } catch (e) {
         continue;
       }
     }
     
-    if (!sendButton || await sendButton.count() === 0) {
+    if (!sendButton) {
       throw new Error('Could not find send button');
     }
     
     await sendButton.click();
     console.log('Clicked send button');
     
-    // Wait for submission to process
-    await page.waitForTimeout(2000);
+    // Wait for navigation or success response after submission
+    try {
+      await page.waitForLoadState('networkidle', { timeout: 5000 });
+    } catch (e) {
+      // Continue if timeout - the submission might still have worked
+    }
     
     // Check for success indicators
     const successIndicators = [
@@ -147,14 +144,13 @@ async function sendToPager(phoneNumber, message, options = {}) {
       '.alert-success'
     ];
     
-    let success = false;
+    let confirmed = false;
     for (const indicator of successIndicators) {
       try {
-        const element = await page.locator(indicator).first();
-        if (await element.count() > 0) {
-          success = true;
-          break;
-        }
+        const element = page.locator(indicator).first();
+        await element.waitFor({ timeout: 2000 });
+        confirmed = true;
+        break;
       } catch (e) {
         continue;
       }
@@ -165,7 +161,7 @@ async function sendToPager(phoneNumber, message, options = {}) {
     return {
       success: true,
       message: 'Message sent successfully',
-      confirmed: success
+      confirmed: confirmed
     };
   } catch (error) {
     console.error('Error sending to pager:', error);
