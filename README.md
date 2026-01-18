@@ -60,10 +60,27 @@ The server will start on the configured port (default: 3000).
 1. Open your Uptime Kuma dashboard
 2. Go to Settings → Notifications
 3. Add a new notification with type "Webhook"
-4. Set the webhook URL to: `http://your-server:3000/webhook`
-5. Set the method to POST
-6. Save the notification
-7. Attach the notification to your monitors
+4. Configure the webhook:
+   - **Friendly Name**: Pageify
+   - **Post URL**: `http://your-server:3000/webhook`
+   - **Request Method**: POST
+   - **Content Type**: application/json
+   - **Request Body**: Leave as default (Uptime Kuma will send its standard payload)
+5. Save the notification
+6. Attach the notification to your monitors
+
+#### Example Uptime Kuma Webhook Configuration
+
+**Webhook URL Format:**
+```
+http://your-server-ip:3000/webhook
+```
+or if using a domain:
+```
+https://pageify.yourdomain.com/webhook
+```
+
+**Note**: Make sure your Uptime Kuma instance can reach the Pageify server over the network.
 
 ### Webhook Endpoint
 
@@ -146,6 +163,95 @@ If port 3000 is already in use, change the `PORT` in your `.env` file.
 Make sure Playwright browsers are installed:
 ```bash
 npx playwright install
+```
+
+### Headless Mode Issues
+
+If you're running on a server without a display:
+- Make sure `HEADLESS=true` in your `.env` file
+- Or use `xvfb-run` to provide a virtual display:
+```bash
+xvfb-run npm start
+```
+
+### Network/DNS Issues
+
+If the pager website can't be reached:
+- Check your firewall settings
+- Verify DNS resolution: `nslookup secure.usamobility.net`
+- Ensure your server has internet access
+
+## Deployment
+
+### Running as a Service (systemd)
+
+Create a systemd service file `/etc/systemd/system/pageify.service`:
+
+```ini
+[Unit]
+Description=Pageify - Uptime Kuma Pager Exporter
+After=network.target
+
+[Service]
+Type=simple
+User=your-user
+WorkingDirectory=/path/to/pageify
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable and start the service:
+```bash
+sudo systemctl enable pageify
+sudo systemctl start pageify
+sudo systemctl status pageify
+```
+
+### Running with PM2
+
+```bash
+npm install -g pm2
+pm2 start src/index.js --name pageify
+pm2 save
+pm2 startup
+```
+
+### Docker Deployment
+
+Create a `Dockerfile`:
+
+```dockerfile
+FROM node:18-slim
+
+# Install Playwright dependencies
+RUN apt-get update && apt-get install -y \
+    chromium \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+# Install Playwright
+RUN npx playwright install chromium --with-deps
+
+EXPOSE 3000
+
+CMD ["node", "src/index.js"]
+```
+
+Build and run:
+```bash
+docker build -t pageify .
+docker run -d -p 3000:3000 --env-file .env --name pageify pageify
 ```
 
 ## License
