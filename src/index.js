@@ -74,5 +74,4 @@ app.listen(PORT, () => {
   console.log(`Pageify server is running on port ${PORT}`);
   console.log(`Webhook URL: http://localhost:${PORT}/webhook`);
   console.log(`Pager phone number: ${PAGER_PHONE_NUMBER}`);
-  console.log('Delivery mode: api (HTTP POST)');
 });
