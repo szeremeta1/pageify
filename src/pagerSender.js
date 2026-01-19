@@ -32,109 +32,48 @@ async function sendToPager(phoneNumber, message, options = {}) {
     });
     console.log('Navigated to pager website');
 
-    // Step 1: enter pager number then continue
-    const phoneSelectorList = [
-      'input[name*="subscriber"]',
-      'input[id*="subscriber"]',
-      'input[name*="pager"]',
-      'input[id*="pager"]',
-      'input[type="tel"]',
-      'input[type="text"]'
-    ];
-
-    let phoneInput = null;
-
-    // Try on main page first
-    phoneInput = page.locator(phoneSelectorList.join(', ')).first();
-    try {
-      await phoneInput.waitFor({ state: 'visible', timeout: 8000 });
-    } catch (e) {
-      // Fallback: look inside first iframe if present
+    // Helper to locate the frame that actually contains the visible form
+    const findFormFrame = async (labelText) => {
       const frames = page.frames();
-      const targetFrame = frames.find(f => f !== page.mainFrame());
-      if (targetFrame) {
-        console.log('Falling back to iframe for subscriber input');
-        phoneInput = targetFrame.locator(phoneSelectorList.join(', ')).first();
-        await phoneInput.waitFor({ state: 'visible', timeout: 8000 });
-      } else {
-        throw e;
+      for (const f of frames) {
+        try {
+          const heading = f.getByText(labelText, { exact: false }).first();
+          if (await heading.isVisible({ timeout: 1500 })) {
+            return f;
+          }
+        } catch (e) {
+          continue;
+        }
       }
-    }
+      return page.mainFrame();
+    };
 
+    // Step 1: enter pager number then continue
+    const formFrame = await findFormFrame('Send a Page');
+
+    const phoneInput = formFrame.getByRole('textbox').first();
+    await phoneInput.waitFor({ state: 'visible', timeout: 12000 });
+    await phoneInput.click({ timeout: 2000 });
     await phoneInput.fill(phoneNumber, { timeout: 5000 });
     console.log(`Entered phone number: ${phoneNumber}`);
 
-    const continueSelectorList = [
-      'button:has-text("Continue")',
-      'input[type="submit"][value*="Continue"]',
-      'input[value*="Continue"]',
-      'button[name*="continue"]'
-    ];
-
-    let continueButton = page.locator(continueSelectorList.join(', ')).first();
-    try {
-      await continueButton.waitFor({ state: 'visible', timeout: 8000 });
-    } catch (e) {
-      const frames = page.frames();
-      const targetFrame = frames.find(f => f !== page.mainFrame());
-      if (targetFrame) {
-        continueButton = targetFrame.locator(continueSelectorList.join(', ')).first();
-        await continueButton.waitFor({ state: 'visible', timeout: 8000 });
-      } else {
-        throw e;
-      }
-    }
-
+    const continueButton = formFrame.getByRole('button', { name: /continue/i }).first();
+    await continueButton.waitFor({ state: 'visible', timeout: 12000 });
     await continueButton.click({ timeout: 5000 });
     console.log('Clicked continue');
 
-    // Wait for step 2 to load (message box visible)
+    // Wait for step 2 (message page) to appear
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    const messageFrame = await findFormFrame('Please enter the message');
 
-    const messageSelectorList = [
-      'textarea',
-      'textarea[name*="message"]',
-      'input[name*="message"]',
-      'input[id*="message"]'
-    ];
-
-    let messageInput = page.locator(messageSelectorList.join(', ')).first();
-    try {
-      await messageInput.waitFor({ state: 'visible', timeout: 8000 });
-    } catch (e) {
-      const frames = page.frames();
-      const targetFrame = frames.find(f => f !== page.mainFrame());
-      if (targetFrame) {
-        messageInput = targetFrame.locator(messageSelectorList.join(', ')).first();
-        await messageInput.waitFor({ state: 'visible', timeout: 8000 });
-      } else {
-        throw e;
-      }
-    }
-
+    const messageInput = messageFrame.getByRole('textbox').first();
+    await messageInput.waitFor({ state: 'visible', timeout: 12000 });
+    await messageInput.click({ timeout: 2000 });
     await messageInput.fill(message, { timeout: 5000 });
     console.log('Entered message');
 
-    const sendSelectorList = [
-      'button:has-text("Send")',
-      'input[type="submit"][value*="Send"]',
-      'input[value*="Send"]'
-    ];
-
-    let sendButton = page.locator(sendSelectorList.join(', ')).first();
-    try {
-      await sendButton.waitFor({ state: 'visible', timeout: 8000 });
-    } catch (e) {
-      const frames = page.frames();
-      const targetFrame = frames.find(f => f !== page.mainFrame());
-      if (targetFrame) {
-        sendButton = targetFrame.locator(sendSelectorList.join(', ')).first();
-        await sendButton.waitFor({ state: 'visible', timeout: 8000 });
-      } else {
-        throw e;
-      }
-    }
-
+    const sendButton = messageFrame.getByRole('button', { name: /send/i }).first();
+    await sendButton.waitFor({ state: 'visible', timeout: 12000 });
     await sendButton.click({ timeout: 5000 });
     console.log('Clicked send button');
 
