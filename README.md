@@ -1,258 +1,96 @@
 # Pageify
 
-An Uptime Kuma pager exporter that receives webhook notifications and sends them to a pager service at secure.usamobility.net.
+An Uptime Kuma webhook receiver that cleans messages and submits them to the Spok/USA Mobility web form via Playwright.
 
-## Features
+## What it does
 
-- 📥 Receives webhook notifications from Uptime Kuma
-- 🧹 Cleans up emojis and reformats messages for pager delivery
-- 🤖 Automatically navigates to secure.usamobility.net
-- 📤 Sends formatted messages to the specified pager number
+- Receives `POST /webhook` payloads from Uptime Kuma
+- Cleans the message (removes emojis, formats status/timestamp)
+- Automates the Spok “Send a Page” form: fills pager number, continues, fills message, sends
+
+## Project layout
+
+```
+pageify/
+├── src/
+│   ├── index.js         # Express server + webhook handling
+│   ├── messageClean.js  # Emoji removal + formatting
+│   └── pagerSender.js   # Playwright automation of the pager form
+├── package.json
+└── README.md
+```
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- npm or yarn
+- Node.js 18+ recommended
+- Playwright Chromium binaries and system deps
 
-## Installation
+Install dependencies and Playwright runtime:
 
-1. Clone the repository:
-```bash
-git clone https://github.com/szeremeta1/pageify.git
-cd pageify
-```
-
-2. Install dependencies:
 ```bash
 npm install
+npx playwright install --with-deps chromium
 ```
 
-3. Install Playwright browsers:
-```bash
-npx playwright install chromium
-```
+## Configuration
 
-4. Create a `.env` file based on `.env.example`:
-```bash
-cp .env.example .env
-```
+Create a `.env` alongside `package.json`:
 
-5. Configure your settings in `.env`:
 ```env
-PORT=3000
+PORT=3000                 # optional
 PAGER_PHONE_NUMBER=7322063021
-PAGER_URL=https://secure.usamobility.net
-HEADLESS=false
+HEADLESS=true             # set false to watch the browser
 ```
 
-## Usage
+Notes:
+- `HEADLESS` defaults to false in code if unset.
+- `PAGER_PHONE_NUMBER` is required for the automation.
 
-### Starting the Server
+## Run locally
 
 ```bash
 npm start
 ```
 
-The server will start on the configured port (default: 3000).
+Endpoints:
+- `POST /webhook` – Uptime Kuma target
+- `GET /health` – basic health check
+- `GET /` – service info
 
-### Configuring Uptime Kuma
+Quick webhook test:
 
-1. Open your Uptime Kuma dashboard
-2. Go to Settings → Notifications
-3. Add a new notification with type "Webhook"
-4. Configure the webhook:
-   - **Friendly Name**: Pageify
-   - **Post URL**: `http://your-server:3000/webhook`
-   - **Request Method**: POST
-   - **Content Type**: application/json
-   - **Request Body**: Leave as default (Uptime Kuma will send its standard payload)
-5. Save the notification
-6. Attach the notification to your monitors
-
-#### Example Uptime Kuma Webhook Configuration
-
-**Webhook URL Format:**
-```
-http://your-server-ip:3000/webhook
-```
-or if using a domain:
-```
-https://pageify.yourdomain.com/webhook
+```bash
+curl -X POST http://localhost:3000/webhook \
+  -H 'Content-Type: application/json' \
+  -d '{"msg":"Pageify Testing"}'
 ```
 
-**Note**: Make sure your Uptime Kuma instance can reach the Pageify server over the network.
+## Uptime Kuma setup
 
-### Webhook Endpoint
+- Notification type: Webhook
+- Post URL: `http://<your-host>:3000/webhook`
+- Method: POST
+- Content Type: application/json
+- Body: keep default (standard Kuma payload)
 
-The server exposes the following endpoints:
+## How it works
 
-- `POST /webhook` - Receives Uptime Kuma webhooks
-- `GET /health` - Health check endpoint
-- `GET /` - Service information
-
-### Example Uptime Kuma Payload
-
-```json
-{
-  "monitor": {
-    "name": "My Server"
-  },
-  "heartbeat": {
-    "status": 0
-  },
-  "msg": "Server is down! ⚠️"
-}
-```
-
-### Message Cleaning
-
-The application automatically:
-- Removes all emoji characters
-- Formats the message with monitor name, status, and timestamp
-- Cleans up excessive whitespace
-
-## Configuration
-
-### Environment Variables
-
-- `PORT` - Server port (default: 3000)
-- `PAGER_PHONE_NUMBER` - Phone number for the pager (default: 7322063021)
-- `PAGER_URL` - Pager service URL (default: https://secure.usamobility.net)
-- `HEADLESS` - Run browser in headless mode (default: false, set to true for production)
-
-## Development
-
-The project structure:
-
-```
-pageify/
-├── src/
-│   ├── index.js         # Main server application
-│   ├── messageClean.js  # Message cleaning utilities
-│   └── pagerSender.js   # Browser automation for pager
-├── .env.example         # Example environment configuration
-├── .gitignore
-├── package.json
-└── README.md
-```
-
-## How It Works
-
-1. **Webhook Reception**: Express server receives POST requests from Uptime Kuma
-2. **Message Cleaning**: Emojis are stripped and the message is reformatted
-3. **Browser Automation**: Playwright launches a browser and navigates to the pager website
-4. **Form Filling**: The phone number and message are automatically entered
-5. **Submission**: The message is sent to the pager
+1) Express receives the webhook.
+2) `cleanMessage` strips emojis and formats text with timestamp.
+3) `pagerSender` launches Playwright Chromium, fills the pager number, continues, fills the message, and clicks send.
 
 ## Troubleshooting
 
-### Playwright Installation Issues
+- Playwright deps missing (errors like `libnspr4.so`):
+  ```bash
+  npx playwright install --with-deps chromium
+  ```
 
-If you encounter issues with Playwright:
-```bash
-npx playwright install-deps
-npx playwright install chromium
-```
+- Watch the browser for debugging: set `HEADLESS=false` in `.env`.
 
-### Port Already in Use
+- Port in use: change `PORT` in `.env`.
 
-If port 3000 is already in use, change the `PORT` in your `.env` file.
-
-### Browser Not Found
-
-Make sure Playwright browsers are installed:
-```bash
-npx playwright install
-```
-
-### Headless Mode Issues
-
-If you're running on a server without a display:
-- Make sure `HEADLESS=true` in your `.env` file
-- Or use `xvfb-run` to provide a virtual display:
-```bash
-xvfb-run npm start
-```
-
-### Network/DNS Issues
-
-If the pager website can't be reached:
-- Check your firewall settings
-- Verify DNS resolution: `nslookup secure.usamobility.net`
-- Ensure your server has internet access
-
-## Deployment
-
-### Running as a Service (systemd)
-
-Create a systemd service file `/etc/systemd/system/pageify.service`:
-
-```ini
-[Unit]
-Description=Pageify - Uptime Kuma Pager Exporter
-After=network.target
-
-[Service]
-Type=simple
-User=your-user
-WorkingDirectory=/path/to/pageify
-Environment=NODE_ENV=production
-ExecStart=/usr/bin/node src/index.js
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Then enable and start the service:
-```bash
-sudo systemctl enable pageify
-sudo systemctl start pageify
-sudo systemctl status pageify
-```
-
-### Running with PM2
-
-```bash
-npm install -g pm2
-pm2 start src/index.js --name pageify
-pm2 save
-pm2 startup
-```
-
-### Docker Deployment
-
-Create a `Dockerfile`:
-
-```dockerfile
-FROM node:18-slim
-
-# Install Playwright dependencies
-RUN apt-get update && apt-get install -y \
-    chromium \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-
-# Install Playwright
-RUN npx playwright install chromium --with-deps
-
-EXPOSE 3000
-
-CMD ["node", "src/index.js"]
-```
-
-Build and run:
-```bash
-docker build -t pageify .
-docker run -d -p 3000:3000 --env-file .env --name pageify pageify
-```
+- Retry page automation: restart the server after changing `.env`.
 
 ## License
 
