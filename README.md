@@ -39,12 +39,16 @@ Create a `.env` alongside `package.json`:
 ```env
 PORT=3000                 # optional
 PAGER_PHONE_NUMBER=7322063021
-HEADLESS=true             # set false to watch the browser
+HEADLESS=true             # only used in browser mode
+DELIVERY_MODE=api         # api (default) or browser
+PAGER_URL=https://secure.spokwireless.net  # optional override
 ```
 
 Notes:
-- `HEADLESS` defaults to false in code if unset.
-- `PAGER_PHONE_NUMBER` is required for the automation.
+- `DELIVERY_MODE=api` uses direct HTTP POST (lighter, default).
+- `DELIVERY_MODE=browser` uses Playwright (legacy path).
+- `HEADLESS` only affects the browser mode.
+- Messages are truncated to 240 chars (service limit).
 
 ## Run locally
 
