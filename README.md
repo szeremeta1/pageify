@@ -1,6 +1,6 @@
 # Pageify
 
-An Uptime Kuma webhook receiver that cleans messages and submits them to the Spok/USA Mobility web form via Playwright.
+An Uptime Kuma webhook receiver that cleans messages and submits them to the Spok/USA Mobility web form via direct HTTP POST (no browser).
 
 ## What it does
 
@@ -15,7 +15,7 @@ pageify/
 ├── src/
 │   ├── index.js         # Express server + webhook handling
 │   ├── messageClean.js  # Emoji removal + formatting
-│   └── pagerSender.js   # Playwright automation of the pager form
+│   └── pagerApi.js      # Direct HTTP POST sender
 ├── package.json
 └── README.md
 ```
@@ -23,13 +23,12 @@ pageify/
 ## Prerequisites
 
 - Node.js 18+ recommended
-- Playwright Chromium binaries and system deps
+- Node.js dependencies
 
-Install dependencies and Playwright runtime:
+Install dependencies:
 
 ```bash
 npm install
-npx playwright install --with-deps chromium
 ```
 
 ## Configuration
@@ -39,15 +38,10 @@ Create a `.env` alongside `package.json`:
 ```env
 PORT=3000                 # optional
 PAGER_PHONE_NUMBER=7322063021
-HEADLESS=true             # only used in browser mode
-DELIVERY_MODE=api         # api (default) or browser
 PAGER_URL=https://secure.spokwireless.net  # optional override
 ```
 
 Notes:
-- `DELIVERY_MODE=api` uses direct HTTP POST (lighter, default).
-- `DELIVERY_MODE=browser` uses Playwright (legacy path).
-- `HEADLESS` only affects the browser mode.
 - Messages are truncated to 240 chars (service limit).
 
 ## Run locally
@@ -81,20 +75,13 @@ curl -X POST http://localhost:3000/webhook \
 
 1) Express receives the webhook.
 2) `cleanMessage` strips emojis and formats text with timestamp.
-3) `pagerSender` launches Playwright Chromium, fills the pager number, continues, fills the message, and clicks send.
+3) `pagerApi` sends a server-side HTTP POST directly to Spok.
 
 ## Troubleshooting
 
-- Playwright deps missing (errors like `libnspr4.so`):
-  ```bash
-  npx playwright install --with-deps chromium
-  ```
-
-- Watch the browser for debugging: set `HEADLESS=false` in `.env`.
-
 - Port in use: change `PORT` in `.env`.
 
-- Retry page automation: restart the server after changing `.env`.
+- Retry sending: restart the server after changing `.env`.
 
 ## License
 

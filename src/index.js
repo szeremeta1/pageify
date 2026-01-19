@@ -6,14 +6,11 @@
 require('dotenv').config();
 const express = require('express');
 const { cleanMessage } = require('./messageClean');
-const { sendToPager: sendToPagerBrowser } = require('./pagerSender');
 const { sendToPagerApi } = require('./pagerApi');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const PAGER_PHONE_NUMBER = process.env.PAGER_PHONE_NUMBER || '7322063021';
-const HEADLESS = process.env.HEADLESS === 'true';
-const DELIVERY_MODE = (process.env.DELIVERY_MODE || 'api').toLowerCase();
 
 // Middleware
 app.use(express.json());
@@ -51,11 +48,8 @@ app.post('/webhook', async (req, res) => {
       message: 'Webhook received, processing...'
     });
     
-    // Send to pager asynchronously
-    const sender = DELIVERY_MODE === 'browser' ? sendToPagerBrowser : sendToPagerApi;
-    const result = await sender(PAGER_PHONE_NUMBER, cleanedMessage, {
-      headless: HEADLESS
-    });
+    // Send to pager asynchronously via direct HTTP API
+    const result = await sendToPagerApi(PAGER_PHONE_NUMBER, cleanedMessage);
     
     if (result.success) {
       console.log('Message sent to pager successfully');
@@ -80,6 +74,5 @@ app.listen(PORT, () => {
   console.log(`Pageify server is running on port ${PORT}`);
   console.log(`Webhook URL: http://localhost:${PORT}/webhook`);
   console.log(`Pager phone number: ${PAGER_PHONE_NUMBER}`);
-  console.log(`Headless mode: ${HEADLESS}`);
-    console.log(`Delivery mode: ${DELIVERY_MODE}`);
+  console.log('Delivery mode: api (HTTP POST)');
 });
