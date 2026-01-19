@@ -20,121 +20,86 @@ async function sendToPager(phoneNumber, message, options = {}) {
     console.log(`Sending message to pager ${phoneNumber}...`);
     
     // Launch browser
-    browser = await chromium.launch({
-      headless
-    });
+    browser = await chromium.launch({ headless });
     
     const context = await browser.newContext();
     const page = await context.newPage();
     
     // Navigate to the pager website
-    await page.goto('https://secure.usamobility.net', { 
-      waitUntil: 'networkidle',
-      timeout: timeout 
+    await page.goto('https://secure.usamobility.net', {
+      waitUntil: 'domcontentloaded',
+      timeout
     });
     console.log('Navigated to pager website');
-    
-    // Wait for page to be ready
-    await page.waitForLoadState('domcontentloaded');
-    
-    // Find and fill the phone number input
-    // Try multiple selector strategies
-    const phoneSelectors = [
-      'input[name*="phone"]',
-      'input[name*="number"]',
-      'input[id*="phone"]',
-      'input[id*="number"]',
-      'input[placeholder*="phone"]',
-      'input[placeholder*="number"]',
-      'input[type="tel"]',
-      'input[type="text"]:first-of-type'
-    ];
-    
-    let phoneInput = null;
-    for (const selector of phoneSelectors) {
-      try {
-        phoneInput = page.locator(selector).first();
-        await phoneInput.waitFor({ timeout: 5000 });
-        break;
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!phoneInput) {
-      throw new Error('Could not find phone number input field');
-    }
-    
-    // Type the phone number
-    await phoneInput.fill(phoneNumber);
+
+    // Step 1: enter pager number then continue
+    const phoneInput = page
+      .locator(
+        [
+          'input[name*="subscriber"]',
+          'input[id*="subscriber"]',
+          'input[name*="pager"]',
+          'input[id*="pager"]',
+          'input[type="tel"]',
+          'input[type="text"]'
+        ].join(', ')
+      )
+      .first();
+
+    await phoneInput.waitFor({ state: 'visible', timeout: 10000 });
+    await phoneInput.fill(phoneNumber, { timeout: 5000 });
     console.log(`Entered phone number: ${phoneNumber}`);
-    
-    // Find and fill the message textarea/input
-    const messageSelectors = [
-      'textarea',
-      'input[name*="message"]',
-      'input[name*="text"]',
-      'input[id*="message"]',
-      'input[id*="text"]',
-      'input[placeholder*="message"]',
-      'input[type="text"]:last-of-type'
-    ];
-    
-    let messageInput = null;
-    for (const selector of messageSelectors) {
-      try {
-        messageInput = page.locator(selector).first();
-        await messageInput.waitFor({ timeout: 5000 });
-        break;
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!messageInput) {
-      throw new Error('Could not find message input field');
-    }
-    
-    // Type the message
-    await messageInput.fill(message);
+
+    const continueButton = page
+      .locator(
+        [
+          'button:has-text("Continue")',
+          'input[type="submit"][value*="Continue"]',
+          'input[value*="Continue"]',
+          'button[name*="continue"]'
+        ].join(', ')
+      )
+      .first();
+
+    await continueButton.waitFor({ state: 'visible', timeout: 10000 });
+    await continueButton.click({ timeout: 5000 });
+    console.log('Clicked continue');
+
+    // Wait for step 2 to load (message box visible)
+    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+
+    const messageInput = page
+      .locator(
+        [
+          'textarea',
+          'textarea[name*="message"]',
+          'input[name*="message"]',
+          'input[id*="message"]'
+        ].join(', ')
+      )
+      .first();
+
+    await messageInput.waitFor({ state: 'visible', timeout: 10000 });
+    await messageInput.fill(message, { timeout: 5000 });
     console.log('Entered message');
-    
-    // Find and click the send button
-    const sendSelectors = [
-      'button:has-text("Send")',
-      'button:has-text("Submit")',
-      'input[type="submit"]',
-      'button[type="submit"]',
-      'button:has-text("send")',
-      'input[value*="Send"]',
-      'input[value*="Submit"]'
-    ];
-    
-    let sendButton = null;
-    for (const selector of sendSelectors) {
-      try {
-        sendButton = page.locator(selector).first();
-        await sendButton.waitFor({ timeout: 5000 });
-        break;
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!sendButton) {
-      throw new Error('Could not find send button');
-    }
-    
-    await sendButton.click();
+
+    const sendButton = page
+      .locator(
+        [
+          'button:has-text("Send")',
+          'input[type="submit"][value*="Send"]',
+          'input[value*="Send"]'
+        ].join(', ')
+      )
+      .first();
+
+    await sendButton.waitFor({ state: 'visible', timeout: 10000 });
+    await sendButton.click({ timeout: 5000 });
     console.log('Clicked send button');
-    
-    // Wait for navigation or success response after submission
-    try {
-      await page.waitForLoadState('networkidle', { timeout: 5000 });
-    } catch (e) {
-      // Continue if timeout - the submission might still have worked
-    }
-    
+
+    // Wait briefly for any success state or completion
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+
     // Check for success indicators
     const successIndicators = [
       'text=success',
@@ -143,7 +108,7 @@ async function sendToPager(phoneNumber, message, options = {}) {
       '.success',
       '.alert-success'
     ];
-    
+
     let confirmed = false;
     for (const indicator of successIndicators) {
       try {
