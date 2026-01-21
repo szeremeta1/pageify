@@ -1,5 +1,5 @@
 /**
- * Pageify - Uptime Kuma Pager Exporter
+ * Pageify - Webhook-to-Pager service
  * Main application entry point
  */
 
@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 // Health check endpoint
 app.get('/', (req, res) => {
   res.json({
-    service: 'Pageify - Uptime Kuma Pager Exporter',
+    service: 'Pageify - Webhook-to-Pager',
     status: 'running',
     endpoints: {
       webhook: '/webhook',
@@ -32,10 +32,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Webhook endpoint for Uptime Kuma
+// Webhook endpoint for monitoring notifications
 app.post('/webhook', async (req, res) => {
   try {
-    console.log('Received webhook from Uptime Kuma');
+    console.log('Received webhook');
     console.log('Payload:', JSON.stringify(req.body, null, 2));
     
     // Clean the message

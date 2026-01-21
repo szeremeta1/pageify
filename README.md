@@ -1,10 +1,10 @@
-# Uptime Kuma Pager
+# Pageify Webhook Pager
 
-An Uptime Kuma webhook receiver that cleans messages and submits them to the Spok/USA Mobility web form via direct HTTP POST (no browser).
+A generic webhook receiver that cleans messages and submits them to the Spok/USA Mobility web form via direct HTTP POST (no browser).
 
 ## What it does
 
-- Receives `POST /webhook` payloads from Uptime Kuma
+- Receives `POST /webhook` payloads from monitoring/alerting webhooks
 - Cleans the message (removes emojis, formats status/timestamp)
 - Automates the Spok “Send a Page” form: fills pager number, continues, fills message, sends
 
@@ -51,7 +51,7 @@ npm start
 ```
 
 Endpoints:
-- `POST /webhook` – Uptime Kuma target
+- `POST /webhook` – monitoring webhook target
 - `GET /health` – basic health check
 - `GET /` – service info
 
@@ -63,13 +63,14 @@ curl -X POST http://localhost:3000/webhook \
   -d '{"msg":"Pageify Testing"}'
 ```
 
-## Uptime Kuma setup
+## Webhook format
 
-- Notification type: Webhook
-- Post URL: `http://<your-host>:3000/webhook`
-- Method: POST
-- Content Type: application/json
-- Body: keep default (standard Kuma payload)
+The service expects a JSON payload with these optional fields:
+- `monitor.name` – name of the monitor
+- `heartbeat.status` – `1` for up, anything else for down
+- `msg` – descriptive message
+
+Any additional fields are ignored but logged for visibility.
 
 ## How it works
 

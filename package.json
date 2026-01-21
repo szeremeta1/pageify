@@ -1,13 +1,13 @@
 {
   "name": "pageify",
   "version": "1.0.0",
-  "description": "An Uptime Kuma pager exporter",
+  "description": "A generic webhook-to-pager exporter",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node src/index.js"
   },
-  "keywords": ["uptime-kuma", "pager", "webhook"],
+  "keywords": ["pager", "webhook", "monitoring"],
   "author": "",
   "license": "MIT",
   "dependencies": {

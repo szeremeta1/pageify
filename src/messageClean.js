@@ -1,6 +1,6 @@
 /**
  * Message cleaner utility
- * Removes emojis and reformats Uptime Kuma messages for pager delivery
+ * Removes emojis and reformats monitoring webhook messages for pager delivery
  */
 
 /**
@@ -29,12 +29,12 @@ function removeEmojis(text) {
 
 /**
  * Clean and format message for pager
- * @param {Object} uptimeKumaPayload - Uptime Kuma webhook payload
+ * @param {Object} webhookPayload - Monitoring webhook payload
  * @returns {string} - Formatted message for pager
  */
-function cleanMessage(uptimeKumaPayload) {
+function cleanMessage(webhookPayload) {
   try {
-    const { msg, heartbeat, monitor } = uptimeKumaPayload;
+    const { msg, heartbeat, monitor } = webhookPayload;
     
     let message = '';
     
