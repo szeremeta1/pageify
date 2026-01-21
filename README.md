@@ -1,6 +1,6 @@
-# Uptime Kuma Pager
+# Pageify
 
-An Uptime Kuma webhook receiver that cleans messages and submits them to the Spok/USA Mobility web form via direct HTTP POST (no browser).
+A webhook receiver that cleans messages and submits them to the Spok/USA Mobility web form via direct HTTP POST (no browser).
 
 ## What it does
 
