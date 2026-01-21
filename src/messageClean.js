@@ -34,34 +34,15 @@ function removeEmojis(text) {
  */
 function cleanMessage(webhookPayload) {
   try {
-    const { msg, heartbeat, monitor } = webhookPayload;
-    
-    let message = '';
-    
-    // Extract monitor name
-    if (monitor && monitor.name) {
-      message += `Monitor: ${removeEmojis(monitor.name)}\n`;
+    const { msg } = webhookPayload;
+
+    if (!msg) {
+      return 'No message provided';
     }
-    
-    // Add status
-    if (heartbeat && heartbeat.status !== undefined) {
-      const status = heartbeat.status === 1 ? 'UP' : 'DOWN';
-      message += `Status: ${status}\n`;
-    }
-    
-    // Add main message
-    if (msg) {
-      message += removeEmojis(msg);
-    }
-    
-    // Add timestamp
-    const timestamp = new Date().toLocaleString();
-    message += `\nTime: ${timestamp}`;
-    
-    // Clean up extra whitespace and newlines
-    message = message.replace(/\n{3,}/g, '\n\n').trim();
-    
-    return message;
+
+    const cleaned = removeEmojis(msg).trim();
+
+    return cleaned || 'No message provided';
   } catch (error) {
     console.error('Error cleaning message:', error);
     return 'Error processing message';
