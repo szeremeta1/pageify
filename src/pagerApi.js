@@ -2,11 +2,10 @@ const BASE_URL = process.env.PAGER_URL || 'https://secure.spokwireless.net';
 
 // Normalize and clamp message to 240 chars (service limit in UI)
 function prepareMessage(message) {
-  // Normalize spaces/tabs on each line while preserving newlines
+  // Replace newlines with triple spaces, then normalize other whitespace
   const normalized = (message || '')
-    .split('\n')
-    .map(line => line.replace(/[ \t]+/g, ' ').trim())
-    .join('\n')
+    .replace(/\r?\n/g, '   ')
+    .replace(/[ \t]+/g, ' ')
     .trim();
   return normalized.slice(0, 240);
 }
